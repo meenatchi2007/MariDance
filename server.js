@@ -1,12 +1,14 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
+const cors = require("cors");
 
 dotenv.config();
 
 const app = express();
 
 // Middleware
+app.use(cors());
 app.use(express.json());
 
 // Routers (CASE-SENSITIVE – MATCHES YOUR FOLDER)
@@ -16,9 +18,10 @@ const enrollmentRouter = require("./Routers/enrollmentRouter");
 const adminRouter = require("./Routers/adminRouter");
 
 // Routes
-app.use("/api/auth", signupRouter);
-app.use("/api/contact", contactRouter);
-app.use("/api/enrollment", enrollmentRouter);
+app.use("/api", signupRouter);
+app.use("/api", contactRouter);
+app.use("/api", enrollmentRouter);
+app.use("/api", adminRouter);
 app.use("/api/admin", adminRouter);
 
 // MongoDB connection

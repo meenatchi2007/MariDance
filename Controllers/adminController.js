@@ -136,6 +136,7 @@ const getAllClasses = async (req, res) => {
 // Add new dance class
 const addClass = async (req, res) => {
     try {
+        console.log('Add class request body:', req.body);
         const { name, instructor, schedule, students } = req.body;
         
         if (!name || !instructor || !schedule) {
@@ -158,7 +159,8 @@ const addClass = async (req, res) => {
             students: savedClass.students
         });
     } catch (error) {
-        res.status(500).json({ error: 'Failed to add class' });
+        console.error('Add class error:', error);
+        res.status(500).json({ error: 'Failed to add class', details: error.message });
     }
 };
 

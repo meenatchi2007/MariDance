@@ -4,6 +4,7 @@ const { getAvailableClasses, enrollInClass, getAllEnrollments } = require("../Co
 
 router.get("/classes", getAvailableClasses);
 router.post("/enroll", enrollInClass);
+router.post("/enrollments", enrollInClass);
 router.get("/enrollments", getAllEnrollments);
 
 module.exports = router;
