@@ -14,7 +14,7 @@ const getAvailableClasses = async (req, res) => {
 // Enroll in a class
 const enrollInClass = async (req, res) => {
     try {
-        console.log('Enrollment request body:', req.body);
+        console.log('Enrollment request received:', req.body);
         const { name, email, phone, age, experience, address, classId, className, instructor, schedule, fee } = req.body;
         
         if (!name || !email || !phone || !className) {
@@ -24,13 +24,17 @@ const enrollInClass = async (req, res) => {
         
         // Check if class exists (if classId provided)
         if (classId) {
+            console.log('Checking if class exists with ID:', classId);
             const danceClass = await Dance.findById(classId);
             if (!danceClass) {
+                console.log('Class not found with ID:', classId);
                 return res.status(404).json({ error: 'Class not found' });
             }
+            console.log('Class found:', danceClass.name);
         }
         
         // Create enrollment
+        console.log('Creating enrollment record...');
         const enrollment = new Enrollment({
             studentName: name,
             email,
@@ -45,20 +49,23 @@ const enrollInClass = async (req, res) => {
             fee
         });
         
-        console.log('Saving enrollment:', enrollment);
-        await enrollment.save();
+        console.log('Saving enrollment to database...');
+        const savedEnrollment = await enrollment.save();
+        console.log('Enrollment saved successfully:', savedEnrollment._id);
         
         // Update student count in class if classId exists
         if (classId) {
+            console.log('Updating student count for class:', classId);
             await Dance.findByIdAndUpdate(classId, { 
                 $inc: { students: 1 } 
             });
+            console.log('Student count updated');
         }
         
-        res.status(201).json({ message: 'Enrollment successful' });
+        res.status(201).json({ message: 'Enrollment successful', enrollmentId: savedEnrollment._id });
     } catch (error) {
         console.error('Enrollment error details:', error.message);
-        console.error('Full error:', error);
+        console.error('Full enrollment error:', error);
         res.status(500).json({ error: 'Failed to enroll in class', details: error.message });
     }
 };

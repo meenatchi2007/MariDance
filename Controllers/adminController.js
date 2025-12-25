@@ -49,29 +49,40 @@ const getDashboardStats = async (req, res) => {
 // Add new user (admin function)
 const addUser = async (req, res) => {
     try {
-        console.log('Request body:', req.body);
-        const { name, email, phone, role } = req.body;
+        console.log('Add user - Request body:', req.body);
+        const { name, email, phone, role, password } = req.body;
+        
+        console.log('Extracted fields:', { name, email, phone, role, password: password ? '***' : 'not provided' });
         
         if (!name || !email) {
+            console.log('Validation failed - missing name or email');
             return res.status(400).json({ error: 'Name and email are required' });
         }
         
+        console.log('Checking for existing user with email:', email);
         const existingUser = await User.findOne({ email });
         if (existingUser) {
+            console.log('User already exists with email:', email);
             return res.status(400).json({ error: 'Email already exists' });
         }
         
+        console.log('Hashing password...');
         const bcrypt = require('bcryptjs');
-        const defaultPassword = await bcrypt.hash('password123', 10);
+        const userPassword = password || 'password123'; // Use provided password or default
+        const hashedPassword = await bcrypt.hash(userPassword, 10);
         
+        console.log('Creating new user object...');
         const newUser = new User({
             firstname: name,
             email,
             phone,
-            password: defaultPassword
+            password: hashedPassword
         });
         
+        console.log('Saving user to database...');
         const savedUser = await newUser.save();
+        console.log('User saved successfully:', savedUser._id);
+        
         res.status(201).json({ 
             id: savedUser._id,
             name: savedUser.firstname,
@@ -80,7 +91,8 @@ const addUser = async (req, res) => {
             role: role || 'Student'
         });
     } catch (error) {
-        console.error('Add user error:', error);
+        console.error('Add user error details:', error.message);
+        console.error('Full error:', error);
         res.status(500).json({ error: 'Failed to add user', details: error.message });
     }
 };
@@ -120,15 +132,22 @@ const updateUser = async (req, res) => {
 const getAllClasses = async (req, res) => {
     try {
         const classes = await Dance.find().sort({ createdAt: -1 });
-        const formattedClasses = classes.map(cls => ({
-            id: cls._id,
-            name: cls.name,
-            instructor: cls.instructor,
-            schedule: cls.schedule,
-            students: cls.students
-        }));
+        console.log('Found classes in database:', classes.length);
+        
+        const formattedClasses = classes.map(cls => {
+            console.log('Class ID:', cls._id, 'Name:', cls.name);
+            return {
+                id: cls._id,
+                name: cls.name,
+                instructor: cls.instructor,
+                schedule: cls.schedule,
+                students: cls.students
+            };
+        });
+        
         res.status(200).json(formattedClasses);
     } catch (error) {
+        console.error('Get classes error:', error);
         res.status(500).json({ error: 'Failed to fetch classes' });
     }
 };
@@ -167,22 +186,58 @@ const addClass = async (req, res) => {
 // Delete dance class
 const deleteClass = async (req, res) => {
     try {
-        await Dance.findByIdAndDelete(req.params.id);
+        const classId = req.params.id;
+        console.log('Delete class request - ID:', classId);
+        
+        if (!classId || classId === 'undefined' || classId === 'null') {
+            return res.status(400).json({ error: 'Valid class ID is required' });
+        }
+        
+        const deletedClass = await Dance.findByIdAndDelete(classId);
+        if (!deletedClass) {
+            return res.status(404).json({ error: 'Class not found' });
+        }
+        
+        console.log('Class deleted successfully:', deletedClass.name);
         res.status(200).json({ message: 'Class deleted successfully' });
     } catch (error) {
-        res.status(500).json({ error: 'Failed to delete class' });
+        console.error('Delete class error:', error);
+        res.status(500).json({ error: 'Failed to delete class', details: error.message });
     }
 };
 
 // Update dance class
 const updateClass = async (req, res) => {
     try {
+        const classId = req.params.id;
+        console.log('Update class request - ID:', classId, 'Body:', req.body);
+        
+        if (!classId || classId === 'undefined' || classId === 'null') {
+            return res.status(400).json({ error: 'Valid class ID is required' });
+        }
+        
+        // Check if it's a valid MongoDB ObjectId
+        if (!classId.match(/^[0-9a-fA-F]{24}$/)) {
+            return res.status(400).json({ error: 'Invalid class ID format' });
+        }
+        
         const { name, instructor, schedule, students } = req.body;
+        
+        if (!name || !instructor || !schedule) {
+            return res.status(400).json({ error: 'Name, instructor, and schedule are required' });
+        }
+        
         const updatedClass = await Dance.findByIdAndUpdate(
-            req.params.id,
-            { name, instructor, schedule, students },
+            classId,
+            { name, instructor, schedule, students: students || 0 },
             { new: true }
         );
+        
+        if (!updatedClass) {
+            return res.status(404).json({ error: 'Class not found' });
+        }
+        
+        console.log('Class updated successfully:', updatedClass.name);
         res.status(200).json({
             id: updatedClass._id,
             name: updatedClass.name,
@@ -191,7 +246,8 @@ const updateClass = async (req, res) => {
             students: updatedClass.students
         });
     } catch (error) {
-        res.status(500).json({ error: 'Failed to update class' });
+        console.error('Update class error:', error);
+        res.status(500).json({ error: 'Failed to update class', details: error.message });
     }
 };
 
